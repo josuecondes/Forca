@@ -67,7 +67,7 @@ const Login = () => {
             } else {
                 const { error: loginError } = await signIn({ email, password })
                 if (loginError) throw loginError
-                navigate('/')
+                navigate('/home')
             }
         } catch (err) {
             setError(err.message)
