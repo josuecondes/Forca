@@ -79,48 +79,22 @@ const Login = () => {
     return (
         <div style={bgStyle}>
 
-            {/* ── Cabecera ── */}
+            {/* ── Cabecera: Logo FORÇA ── */}
             <div style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                marginBottom: 20,
-                gap: 4,
+                marginBottom: 12,
             }}>
-                {/* BIENVENIDO */}
-                <p style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: '0.35em',
-                    textTransform: 'uppercase',
-                    color: '#6b7a99',
-                    margin: 0,
-                }}>
-                    BIENVENIDO
-                </p>
-
-                {/* FORÇA */}
-                <h1 style={{
-                    fontSize: 52,
-                    fontWeight: 900,
-                    fontStyle: 'italic',
-                    color: '#2b47c9',
-                    margin: 0,
-                    lineHeight: 1.05,
-                    letterSpacing: '-0.02em',
-                    fontFamily: "'Montserrat', sans-serif",
-                }}>
-                    FORÇA
-                </h1>
-
-                {/* Línea azul debajo del título */}
-                <div style={{
-                    width: 40,
-                    height: 3,
-                    background: '#2b47c9',
-                    borderRadius: 2,
-                    marginTop: 4,
-                }} />
+                <img
+                    src="/forca-logo.png"
+                    alt="FORÇA"
+                    style={{
+                        width: 180,
+                        height: 'auto',
+                        filter: 'brightness(1.25) saturate(1.2) hue-rotate(-5deg) drop-shadow(0 6px 20px rgba(43,71,201,0.35))',
+                    }}
+                />
             </div>
 
             {/* ── Card ── */}
