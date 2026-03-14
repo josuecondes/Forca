@@ -11,7 +11,7 @@ import { logRegistro } from '../utils/registro'
 import { format } from 'date-fns'
 
 // Owner modules
-import OwnerCalendario from './owner/OwnerCalendario'
+import SharedCalendar from './SharedCalendar'
 import Diario from './owner/Diario'
 import OwnerClientes from './owner/OwnerClientes'
 import Registro from './owner/Registro'
@@ -370,17 +370,23 @@ const AdminDashboard = () => {
                         {/* Acceso rápido desde header */}
                         {activeSection === 'calendario' && (
                             <button onClick={() => setQuickModal('sesion')}
-                                className="p-2.5 bg-[#22c55e]/10 border border-[#22c55e]/20 rounded-2xl text-[#22c55e] hover:bg-[#22c55e]/20 transition-colors"
+                                className="p-2.5 bg-[#22c55e]/10 border border-[#22c55e]/20 rounded-2xl text-[#22c55e] hover:bg-[#22c55e]/20 transition-colors mr-2"
                                 title="Nueva sesión">
                                 <Plus className="w-5 h-5" />
                             </button>
                         )}
+                        {/* Botón Salir (Logout) */}
+                        <button onClick={signOut}
+                            className="px-4 py-2.5 bg-[#2b47c9] text-white rounded-xl text-xs font-black transition-colors hover:bg-[#1e34a6] shadow-md border border-[#1e34a6]"
+                            title="Cerrar sesión">
+                            SALIR
+                        </button>
                     </header>
 
                     {/* Main content */}
                     <main className="flex-1 overflow-hidden flex flex-col">
                         {activeSection === 'calendario' && (
-                            <OwnerCalendario onNavigate={navigate} />
+                            <SharedCalendar onNavigate={navigate} />
                         )}
                         {activeSection === 'diario' && (
                             <Diario onNavigate={navigate} />

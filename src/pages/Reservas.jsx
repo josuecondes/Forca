@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { format, isFuture, isPast, addDays } from 'date-fns'
+import { format, isFuture, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Calendar, Clock, X, AlertCircle, CheckCircle2, ChevronRight, Plus, BookOpen, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -35,9 +35,9 @@ const Reservas = () => {
         setLoading(true)
         try {
             const { data, error } = await supabase
-                .from('citas')
+                .from('sesiones')
                 .select('*')
-                .eq('estado', 'confirmada')
+                .neq('estado', 'cancelada')
                 .order('fecha', { ascending: true })
                 .order('hora_inicio', { ascending: true })
 
@@ -64,8 +64,8 @@ const Reservas = () => {
         return false
     }
 
-    const proximas = citas.filter(c => c.usuario_id === user?.id && !isPastAppointment(c))
-    const pasadas = citas.filter(c => c.usuario_id === user?.id && isPastAppointment(c))
+    const proximas = citas.filter(c => c.cliente_id === user?.id && !isPastAppointment(c))
+    const pasadas = citas.filter(c => c.cliente_id === user?.id && isPastAppointment(c))
     const filtradas = activeTab === 'proximas' ? proximas : pasadas
 
     // ── Cancelar ───────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ const Reservas = () => {
         if (!selectedCita) return
         setActionLoading(true)
         try {
-            const { error } = await supabase.from('citas').delete().eq('id', selectedCita.id)
+            const { error } = await supabase.from('sesiones').update({ estado: 'cancelada' }).eq('id', selectedCita.id)
             if (error) throw error
             setShowCancelModal(false)
             setSelectedCita(null)
@@ -93,7 +93,7 @@ const Reservas = () => {
         try {
             const horaFin = `${String(parseInt(newHora.split(':')[0]) + 1).padStart(2, '0')}:00`
             const { error } = await supabase
-                .from('citas')
+                .from('sesiones')
                 .update({ fecha: newFecha, hora_inicio: newHora, hora_fin: horaFin })
                 .eq('id', selectedCita.id)
             if (error) throw error
