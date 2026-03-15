@@ -760,13 +760,13 @@ const SharedCalendar = ({ onNavigate }) => {
         // Abreviaciones de días para el header
         const dayAbbrs = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
         return (
-            <div style={{ background: '#ffffff', overflowX: 'auto' }}>
-                <div style={{ minWidth: 0, overflowY: 'hidden', boxSizing: 'border-box' }}>
+            <div style={{ background: '#ffffff', overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 150px)' }}>
+                <div style={{ minWidth: 600, boxSizing: 'border-box', position: 'relative' }}>
                     {/* CABECERA - HORA + días */}
                     <div style={{ display: 'flex', borderBottom: '1px solid #e2e6f0', background: '#ffffff', position: 'sticky', top: 0, zIndex: 20 }}>
                         {/* Columna HORA */}
-                        <div style={{ boxSizing: 'border-box', width: 44, flexShrink: 0, padding: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #e2e6f0' }}>
-                            <span style={{ fontSize: 9, fontWeight: 800, color: '#2b47c9', textTransform: 'uppercase', letterSpacing: '0.05em' }}>HORA</span>
+                        <div style={{ boxSizing: 'border-box', width: 44, flexShrink: 0, padding: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #e2e6f0', background: '#ffffff' }}>
+                            <span style={{ fontSize: 9, fontWeight: 800, color: '#2b47c9', textTransform: 'uppercase', letterSpacing: '0.05em' }}></span>
                         </div>
                         {/* Columnas días */}
                         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${days.length}, 1fr)`, boxSizing: 'border-box' }}>
@@ -1588,8 +1588,48 @@ const SharedCalendar = ({ onNavigate }) => {
                                     <Lock className="w-5 h-5" />
                                 </div>
                                 <div className="text-left flex-1 pb-1">
-                                    <p className="text-white font-bold text-sm">Bloquear tiempo</p>
-                                    <p className="text-white/40 text-xs mt-0.5">Marcar como no disponible</p>
+                                    <p className="text-white font-bold text-sm">Bloquear tiempo (Avanzado)</p>
+                                    <p className="text-white/40 text-xs mt-0.5">Opciones de bloqueo mensual/días</p>
+                                </div>
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setMenuHuecoActivo(null);
+                                    setBlockLoading(true);
+                                    try {
+                                        const getHoraFin30Mins = (hStr) => {
+                                            const [h, m] = hStr.split(':').map(Number)
+                                            let nextM = m + 30; let nextH = h;
+                                            if (nextM >= 60) { nextM = 0; nextH++; }
+                                            return `${String(nextH).padStart(2, '0')}:${String(nextM).padStart(2, '0')}`
+                                        }
+                                        const horaFin = getHoraFin30Mins(menuHuecoActivo.hora)
+                                        
+                                        await runSupabaseQuery(async () => {
+                                            const { error } = await supabase.from('bloqueos').insert([{
+                                                fecha: menuHuecoActivo.fecha,
+                                                hora_inicio: menuHuecoActivo.hora,
+                                                hora_fin: horaFin,
+                                                tipo: 'franja',
+                                                owner_id: user.id
+                                            }])
+                                            if (error) throw error
+                                        })
+                                        await fetchData()
+                                    } catch (err) {
+                                        alert('Error al bloquear: ' + err.message)
+                                    } finally {
+                                        setBlockLoading(false)
+                                    }
+                                }}
+                                className="w-full flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 transition-colors rounded-2xl"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center">
+                                    <Ban className="w-5 h-5" />
+                                </div>
+                                <div className="text-left flex-1 pb-1">
+                                    <p className="text-white font-bold text-sm">Bloquear esta franja</p>
+                                    <p className="text-white/40 text-xs mt-0.5">Bloquear rápidamente {menuHuecoActivo.hora}</p>
                                 </div>
                             </button>
                         </div>
