@@ -91,8 +91,8 @@ const Login = () => {
                     src="/logo_forca_rounded.png" 
                     alt="FORÇA Logo" 
                     style={{
-                        width: 80, // Size similar to typical logos
-                        height: 80,
+                        width: 140, // Increased size further per user request
+                        height: 140,
                         objectFit: 'contain',
                         filter: 'drop-shadow(0px 6px 12px rgba(30,50,120,0.3))'
                     }}
