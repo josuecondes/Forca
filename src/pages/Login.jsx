@@ -23,7 +23,6 @@ const bgStyle = {
     justifyContent: 'center',
     padding: '40px 24px',
     position: 'relative',
-    overflow: 'hidden',
 }
 
 const Login = () => {
@@ -84,17 +83,35 @@ const Login = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                marginBottom: 12,
+                marginBottom: 10,
+                // Reduced gap and margin
+                gap: 8,
             }}>
-                <img
-                    src="/forca-logo.png"
-                    alt="FORÇA"
+                <img 
+                    src="/logo_forca_rounded.png" 
+                    alt="FORÇA Logo" 
                     style={{
-                        width: 180,
-                        height: 'auto',
-                        filter: 'brightness(1.25) saturate(1.2) hue-rotate(-5deg) drop-shadow(0 6px 20px rgba(43,71,201,0.35))',
+                        width: 80, // Size similar to typical logos
+                        height: 80,
+                        objectFit: 'contain',
+                        filter: 'drop-shadow(0px 6px 12px rgba(30,50,120,0.3))'
                     }}
                 />
+                {/* Texto Metalizado FORÇA */}
+                <h1 style={{
+                    margin: 0,
+                    fontSize: 38,
+                    fontWeight: 900,
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    // Efecto metálico azul
+                    background: 'linear-gradient(135deg, #1e38b8 0%, #4a63d8 25%, #2b47c9 50%, #4a63d8 75%, #1e38b8 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0px 2px 2px rgba(0,0,0,0.3)) drop-shadow(0px -1px 1px rgba(255,255,255,0.5))',
+                }}>
+                    FORÇA
+                </h1>
             </div>
 
             {/* ── Card ── */}
@@ -105,12 +122,12 @@ const Login = () => {
                 backdropFilter: 'blur(10px)',
                 WebkitBackdropFilter: 'blur(10px)',
                 borderRadius: 28,
-                padding: '28px 24px 28px',
+                padding: '24px 20px',
                 boxShadow: '0 8px 32px rgba(30, 50, 120, 0.13), 0 2px 8px rgba(30, 50, 120, 0.08)',
                 border: '1px solid rgba(255,255,255,0.6)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 20,
+                gap: 16, // Slightly reduced gap for better fit
             }}>
 
                 {/* Título tarjeta */}
@@ -232,9 +249,11 @@ const Login = () => {
                         type="submit"
                         disabled={loading}
                         style={{
-                            background: loading ? '#4a63d8' : '#2b47c9',
+                            background: loading 
+                                ? '#4a63d8' 
+                                : 'linear-gradient(135deg, #1e38b8 0%, #4a63d8 25%, #2b47c9 50%, #4a63d8 75%, #1e38b8 100%)',
                             color: '#ffffff',
-                            border: 'none',
+                            border: '1px solid #1e38b8',
                             borderRadius: 14,
                             padding: '17px 0',
                             fontWeight: 800,
@@ -243,16 +262,29 @@ const Login = () => {
                             textTransform: 'uppercase',
                             cursor: loading ? 'not-allowed' : 'pointer',
                             width: '100%',
-                            boxShadow: '0 4px 16px rgba(43,71,201,0.35)',
+                            boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 4px rgba(0,0,0,0.4), 0 6px 16px rgba(43,71,201,0.4)',
                             transition: 'all 0.2s ease',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: 10,
                             marginTop: 4,
+                            textShadow: '0 1px 2px rgba(0,0,0,0.4)',
                         }}
-                        onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = '#1e38b8'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(43,71,201,0.45)'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
-                        onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = '#2b47c9'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(43,71,201,0.35)'; e.currentTarget.style.transform = 'translateY(0)' } }}
+                        onMouseEnter={e => { 
+                            if (!loading) { 
+                                e.currentTarget.style.background = 'linear-gradient(135deg, #162a8c 0%, #3a50b8 25%, #1e38b8 50%, #3a50b8 75%, #162a8c 100%)'; 
+                                e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 4px rgba(0,0,0,0.4), 0 8px 22px rgba(43,71,201,0.5)'; 
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            } 
+                        }}
+                        onMouseLeave={e => { 
+                            if (!loading) { 
+                                e.currentTarget.style.background = 'linear-gradient(135deg, #1e38b8 0%, #4a63d8 25%, #2b47c9 50%, #4a63d8 75%, #1e38b8 100%)'; 
+                                e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 4px rgba(0,0,0,0.4), 0 6px 16px rgba(43,71,201,0.4)'; 
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            } 
+                        }}
                     >
                         {loading
                             ? <div style={{ width: 20, height: 20, border: '2.5px solid rgba(255,255,255,0.3)', borderTop: '2.5px solid white', borderRadius: '50%', animation: 'loginSpin 0.7s linear infinite' }} />
@@ -301,42 +333,6 @@ const Login = () => {
                         </button>
                     </div>
                 )}
-            </div>
-
-            {/* ── Enlace Registro / Login ── */}
-            <button
-                type="button"
-                onClick={() => { setIsRegistering(!isRegistering); setError('') }}
-                style={{
-                    marginTop: 20,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    color: '#4a5568',
-                    fontFamily: "'Montserrat', sans-serif",
-                    fontWeight: 500,
-                }}
-            >
-                {isRegistering
-                    ? <>¿Ya tienes cuenta? <span style={{ color: '#2b47c9', fontWeight: 800, textDecoration: 'underline', textUnderlineOffset: 3 }}>Inicia sesión</span></>
-                    : <>¿No tienes cuenta? <span style={{ color: '#2b47c9', fontWeight: 800, textDecoration: 'underline', textUnderlineOffset: 3 }}>Regístrate aquí</span></>
-                }
-            </button>
-
-            {/* ── Soporte Técnico ── */}
-            <div style={{
-                marginTop: 20,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                color: '#8a96b8',
-                opacity: 0.8,
-            }}>
-                <Headset size={14} />
-                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    Soporte Técnico
-                </span>
             </div>
 
             <InstallPWA />
