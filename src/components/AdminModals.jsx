@@ -2,11 +2,150 @@ import React, { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { logRegistro } from '../utils/registro'
-import { Plus, X, Loader2, Move, Lock, Ban } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
-import { clsx } from 'clsx'
+import { Plus, X, Loader2, Move, Lock, Ban, Trash2 } from 'lucide-react'
 
-function cn(...c) { return twMerge(clsx(c)) }
+// ─── TOKENS FORÇA LIGHT ───────────────────────────────────────────────────────
+const F = {
+    blue:     '#2b47c9',
+    blueHov:  '#1e34a6',
+    blueSoft: '#f0f3ff',
+    gray:     '#6b7a99',
+    grayLine: '#e2e6f0',
+    grayBg:   '#f2f4f8',
+    white:    '#ffffff',
+    red:      '#ef4444',
+    redHov:   '#dc2626',
+    redSoft:  '#fef2f2',
+    green:    '#22c55e',
+    greenSoft:'#f0fdf4',
+    orange:   '#f97316',
+}
+
+// ─── OVERLAY CENTRADO (idéntico en todos los modales) ─────────────────────────
+const Overlay = ({ onClick, children }) => (
+    <div
+        onClick={onClick}
+        style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(30,40,90,0.45)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+        }}
+    >
+        {children}
+    </div>
+)
+
+// ─── CARD DEL MODAL ───────────────────────────────────────────────────────────
+const Card = ({ children, onClick }) => (
+    <div
+        onClick={e => { e.stopPropagation(); onClick?.() }}
+        style={{
+            background: F.white,
+            border: `1.5px solid ${F.grayLine}`,
+            borderRadius: 28,
+            padding: '32px 28px 28px',
+            width: '100%',
+            maxWidth: 380,
+            boxShadow: '0 16px 60px rgba(43,71,201,0.18)',
+        }}
+    >
+        {children}
+    </div>
+)
+
+// ─── BOTÓN CUADRADO 3D ─────────────────────────────────────────────────────────
+// Aspecto: fondo de color, sombra de color más oscura abajo = efecto 3D
+const Btn3D = ({
+    onClick, disabled = false, loading = false,
+    color = F.blue, colorHov = F.blueHov, shadowColor = 'rgba(43,71,201,0.35)',
+    textColor = F.white,
+    icon, label, style = {},
+}) => {
+    const [pressed, setPressed] = useState(false)
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled || loading}
+            onMouseDown={() => setPressed(true)}
+            onMouseUp={() => setPressed(false)}
+            onMouseLeave={() => setPressed(false)}
+            style={{
+                flex: 1,
+                aspectRatio: '1 / 1',
+                minHeight: 80,
+                minWidth: 80,
+                background: disabled ? '#d1d5db' : color,
+                color: disabled ? '#9ca3af' : textColor,
+                border: 'none',
+                borderRadius: 18,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                fontWeight: 900,
+                fontSize: 11,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 6,
+                boxShadow: pressed || disabled
+                    ? 'none'
+                    : `0 6px 0 ${disabled ? 'rgba(0,0,0,0.1)' : shadowColor}, 0 10px 20px ${shadowColor}`,
+                transform: pressed ? 'translateY(4px)' : 'translateY(0)',
+                transition: 'transform 0.08s ease, box-shadow 0.08s ease',
+                ...style,
+            }}
+        >
+            {loading
+                ? <Loader2 style={{ width: 22, height: 22 }} className="animate-spin" />
+                : <>
+                    {icon && <span style={{ display: 'flex' }}>{icon}</span>}
+                    <span>{label}</span>
+                </>
+            }
+        </button>
+    )
+}
+
+// ─── BOTÓN VOLVER (ancho completo, fila) ──────────────────────────────────────
+const BtnVolver = ({ onClick, label = 'Volver' }) => (
+    <button
+        onClick={onClick}
+        style={{
+            width: '100%',
+            padding: '14px 0',
+            background: F.grayBg,
+            color: F.gray,
+            border: `1.5px solid ${F.grayLine}`,
+            borderRadius: 16,
+            fontWeight: 800,
+            fontSize: 13,
+            cursor: 'pointer',
+            marginTop: 12,
+            transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = '#e2e6f0'}
+        onMouseLeave={e => e.currentTarget.style.background = F.grayBg}
+    >
+        {label}
+    </button>
+)
+
+// ─── LABEL DE SECCIÓN ─────────────────────────────────────────────────────────
+const Label = ({ children }) => (
+    <p style={{ fontSize: 10, fontWeight: 800, color: F.gray, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
+        {children}
+    </p>
+)
+
+// ─── SELECT / INPUT REUTILIZABLES ─────────────────────────────────────────────
+const inputStyle = {
+    width: '100%', boxSizing: 'border-box',
+    background: '#f8f9fc', border: `1.5px solid ${F.grayLine}`,
+    borderRadius: 14, padding: '10px 14px',
+    color: F.blue, fontWeight: 700, fontSize: 13,
+    outline: 'none', appearance: 'none',
+}
 
 const HORAS = []
 for (let h = 9; h <= 20; h++) {
@@ -55,56 +194,75 @@ export const ModalSesion = ({ horaDia, onClose, onSaved, clientes }) => {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <div className="bg-[#111318] border border-white/10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6" style={{ boxShadow: '0 0 60px rgba(0,0,0,0.9)' }}>
-                <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-base font-black text-white">Nueva sesión — {horaDia?.hora}</h3>
-                    <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"><X className="w-4 h-4 text-white/50" /></button>
-                </div>
-                <div className="space-y-3">
+        <Overlay onClick={onClose}>
+            <Card>
+                <p style={{ fontSize: 10, fontWeight: 800, color: F.gray, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Nueva sesión
+                </p>
+                <h3 style={{ fontSize: 22, fontWeight: 900, color: F.blue, marginBottom: 20 }}>
+                    {horaDia?.hora}
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
                     <div>
-                        <label className="text-xs text-white/40 font-bold mb-1 block">Cliente *</label>
-                        <select value={form.cliente_id} onChange={e => setForm(f => ({ ...f, cliente_id: e.target.value }))}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none cursor-pointer">
-                            <option value="" className="bg-[#111318]">Seleccionar...</option>
-                            {clientes.map(c => <option key={c.id} value={c.id} className="bg-[#111318]">{c.nombre || c.email}</option>)}
+                        <Label>Cliente *</Label>
+                        <select value={form.cliente_id}
+                            onChange={e => setForm(f => ({ ...f, cliente_id: e.target.value }))}
+                            style={inputStyle}>
+                            <option value="">Seleccionar...</option>
+                            {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre || c.email}</option>)}
                         </select>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
-                            <label className="text-xs text-white/40 font-bold mb-1 block">Hora inicio</label>
-                            <select value={form.hora_inicio} onChange={e => setForm(f => ({ ...f, hora_inicio: e.target.value }))}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none cursor-pointer">
-                                {HORAS.map(h => <option key={h} value={h} className="bg-[#111318]">{h}</option>)}
+                            <Label>Hora inicio</Label>
+                            <select value={form.hora_inicio}
+                                onChange={e => setForm(f => ({ ...f, hora_inicio: e.target.value }))}
+                                style={inputStyle}>
+                                {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs text-white/40 font-bold mb-1 block">Tipo</label>
-                            <select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none cursor-pointer">
-                                <option value="regular" className="bg-[#111318]">Regular</option>
-                                <option value="extra" className="bg-[#111318]">Extra</option>
-                                <option value="puntual" className="bg-[#111318]">Puntual</option>
+                            <Label>Tipo</Label>
+                            <select value={form.tipo}
+                                onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}
+                                style={inputStyle}>
+                                <option value="regular">Regular</option>
+                                <option value="extra">Extra</option>
+                                <option value="puntual">Puntual</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-3 mt-5">
-                    <button onClick={handleSave} disabled={loading || !form.cliente_id}
-                        className="flex-1 py-3.5 bg-[#22c55e]/20 text-[#22c55e] rounded-2xl font-black text-sm border border-[#22c55e]/30 hover:bg-[#22c55e]/30 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Crear
-                    </button>
-                    <button onClick={onClose} className="px-5 py-3.5 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors rounded-2xl font-bold text-sm">Cancelar</button>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <Btn3D
+                        onClick={handleSave}
+                        disabled={!form.cliente_id}
+                        loading={loading}
+                        color={F.green}
+                        colorHov="#16a34a"
+                        shadowColor="rgba(34,197,94,0.35)"
+                        icon={<Plus style={{ width: 20, height: 20 }} />}
+                        label="Crear"
+                    />
+                    <Btn3D
+                        onClick={onClose}
+                        color={F.grayBg}
+                        shadowColor="rgba(100,116,139,0.25)"
+                        textColor={F.gray}
+                        label="Cancelar"
+                    />
                 </div>
-            </div>
-        </div>
+                <BtnVolver onClick={onClose} label="Cerrar" />
+            </Card>
+        </Overlay>
     )
 }
 
 // ─── MODAL MOVER SESIÓN ────────────────────────────────────────────────────────
 export const ModalMoverSesion = ({ sesion, onClose, onSaved }) => {
     const { user } = useAuth()
-    // Normalize fecha: could be a Date object or a string like 'yyyy-MM-dd'
     const normalizeFecha = (f) => {
         if (!f) return ''
         if (f instanceof Date) {
@@ -140,35 +298,48 @@ export const ModalMoverSesion = ({ sesion, onClose, onSaved }) => {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <div className="bg-[#111318] border border-white/10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6" style={{ boxShadow: '0 0 60px rgba(0,0,0,0.9)' }}>
-                <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-base font-black text-white">Mover {sesion.isBlock ? 'bloqueo' : 'sesión'}</h3>
-                    <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"><X className="w-4 h-4 text-white/50" /></button>
-                </div>
-                <div className="space-y-3">
+        <Overlay onClick={onClose}>
+            <Card>
+                <p style={{ fontSize: 10, fontWeight: 800, color: F.gray, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Reprogramar
+                </p>
+                <h3 style={{ fontSize: 22, fontWeight: 900, color: F.blue, marginBottom: 20 }}>
+                    {sesion.isBlock ? 'Bloqueo' : 'Sesión'}
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
                     <div>
-                        <label className="text-xs text-white/40 font-bold mb-1 block">Nueva fecha</label>
-                        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none cursor-pointer" />
+                        <Label>Nueva fecha</Label>
+                        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
                     </div>
                     <div>
-                        <label className="text-xs text-white/40 font-bold mb-1 block">Nueva hora</label>
-                        <select value={hora} onChange={e => setHora(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none cursor-pointer">
-                            {HORAS.map(h => <option key={h} value={h} className="bg-[#111318]">{h}</option>)}
+                        <Label>Nueva hora</Label>
+                        <select value={hora} onChange={e => setHora(e.target.value)} style={inputStyle}>
+                            {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
                         </select>
                     </div>
                 </div>
-                <div className="flex gap-3 mt-5">
-                    <button onClick={handleSave} disabled={loading}
-                        className="flex-1 py-3.5 bg-[#a78bfa]/20 text-[#a78bfa] rounded-2xl font-black text-sm border border-[#a78bfa]/30 hover:bg-[#a78bfa]/30 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Move className="w-4 h-4" />} Mover
-                    </button>
-                    <button onClick={onClose} className="px-5 py-3.5 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors rounded-2xl font-bold text-sm">Cancelar</button>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <Btn3D
+                        onClick={handleSave}
+                        loading={loading}
+                        color="#7c3aed"
+                        shadowColor="rgba(124,58,237,0.35)"
+                        icon={<Move style={{ width: 20, height: 20 }} />}
+                        label="Mover"
+                    />
+                    <Btn3D
+                        onClick={onClose}
+                        color={F.grayBg}
+                        shadowColor="rgba(100,116,139,0.25)"
+                        textColor={F.gray}
+                        label="Cancelar"
+                    />
                 </div>
-            </div>
-        </div>
+                <BtnVolver onClick={onClose} />
+            </Card>
+        </Overlay>
     )
 }
 
@@ -185,7 +356,6 @@ export const ModalBloqueo = ({ fecha, horaDefault, horaFinDefault, tipoDefault, 
         setLoading(true)
         try {
             if (isEdit) {
-                // Modo edición: UPDATE
                 const { error } = await supabase.from('bloqueos').update({
                     tipo,
                     hora_inicio: tipo === 'dia_completo' ? null : horaInicio,
@@ -194,7 +364,6 @@ export const ModalBloqueo = ({ fecha, horaDefault, horaFinDefault, tipoDefault, 
                 if (error) throw error
                 await logRegistro({ accion: 'editar_bloqueo', entidad: 'bloqueo', entidad_id: editId, modulo_origen: 'calendario_admin', valor_nuevo: { fecha, tipo, horaInicio, horaFin }, autor_id: user?.id })
             } else {
-                // Modo creación: INSERT
                 const { data, error } = await supabase.from('bloqueos').insert({
                     owner_id: user?.id,
                     fecha,
@@ -211,85 +380,168 @@ export const ModalBloqueo = ({ fecha, horaDefault, horaFinDefault, tipoDefault, 
         finally { setLoading(false) }
     }
 
+    const tipos = [
+        { v: 'dia_completo', label: 'Día\ncompleto' },
+        { v: 'franja',       label: 'Franja\nhoraria' },
+        { v: 'huecos_libres',label: 'Huecos\nlibres' },
+    ]
+
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <div className="bg-[#111318] border border-white/10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6" style={{ boxShadow: '0 0 60px rgba(0,0,0,0.9)' }}>
-                <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-base font-black text-white">{isEdit ? 'Editar bloqueo' : 'Nuevo bloqueo'}</h3>
-                    <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"><X className="w-4 h-4 text-white/50" /></button>
+        <Overlay onClick={onClose}>
+            <Card>
+                <p style={{ fontSize: 10, fontWeight: 800, color: F.gray, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>
+                    {isEdit ? 'Editar bloqueo' : 'Nuevo bloqueo'}
+                </p>
+                <h3 style={{ fontSize: 22, fontWeight: 900, color: F.blue, marginBottom: 20 }}>
+                    {fecha}
+                </h3>
+
+                {/* Selector de tipo — cuadrados 3D */}
+                <div style={{ display: 'flex', gap: 10, marginBottom: tipo !== 'dia_completo' ? 16 : 24 }}>
+                    {tipos.map(({ v, label }) => (
+                        <button
+                            key={v}
+                            onClick={() => setTipo(v)}
+                            style={{
+                                flex: 1,
+                                aspectRatio: '1 / 1',
+                                minHeight: 72,
+                                background: tipo === v ? '#fef2f2' : F.grayBg,
+                                color: tipo === v ? F.red : F.gray,
+                                border: `2px solid ${tipo === v ? F.red : F.grayLine}`,
+                                borderRadius: 16,
+                                fontWeight: 800, fontSize: 10,
+                                whiteSpace: 'pre-line', textAlign: 'center',
+                                cursor: 'pointer',
+                                boxShadow: tipo === v ? `0 4px 0 ${F.redHov}` : `0 4px 0 ${F.grayLine}`,
+                                transform: tipo === v ? 'translateY(0)' : 'translateY(-2px)',
+                                transition: 'all 0.1s',
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
                 </div>
-                <div className="space-y-4">
-                    <div className="flex gap-2">
-                        {[['dia_completo', 'Día completo'], ['franja', 'Franja'], ['huecos_libres', 'Huecos libres']].map(([v, l]) => (
-                            <button key={v} onClick={() => setTipo(v)}
-                                className={cn('flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all',
-                                    tipo === v ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10')}>
-                                {l}
-                            </button>
-                        ))}
-                    </div>
-                    {tipo !== 'dia_completo' && (
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs text-white/40 font-bold mb-1 block">Hora inicio</label>
-                                <select value={horaInicio} onChange={e => setHoraInicio(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none cursor-pointer">
-                                    {HORAS.map(h => <option key={h} value={h} className="bg-[#111318]">{h}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs text-white/40 font-bold mb-1 block">Hora fin</label>
-                                <select value={horaFin} onChange={e => setHoraFin(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none cursor-pointer">
-                                    {HORAS.map(h => <option key={h} value={h} className="bg-[#111318]">{h}</option>)}
-                                </select>
-                            </div>
+
+                {tipo !== 'dia_completo' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                        <div>
+                            <Label>Hora inicio</Label>
+                            <select value={horaInicio} onChange={e => setHoraInicio(e.target.value)} style={inputStyle}>
+                                {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
                         </div>
-                    )}
-                    <p className="text-white/30 text-xs">Fecha: {fecha}</p>
+                        <div>
+                            <Label>Hora fin</Label>
+                            <select value={horaFin} onChange={e => setHoraFin(e.target.value)} style={inputStyle}>
+                                {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <Btn3D
+                        onClick={handleSave}
+                        loading={loading}
+                        color={F.red}
+                        colorHov={F.redHov}
+                        shadowColor="rgba(239,68,68,0.35)"
+                        icon={<Lock style={{ width: 20, height: 20 }} />}
+                        label={isEdit ? 'Guardar' : 'Bloquear'}
+                    />
+                    <Btn3D
+                        onClick={onClose}
+                        color={F.grayBg}
+                        shadowColor="rgba(100,116,139,0.25)"
+                        textColor={F.gray}
+                        label="Cancelar"
+                    />
                 </div>
-                <div className="flex gap-3 mt-5">
-                    <button onClick={handleSave} disabled={loading}
-                        className="flex-1 py-3.5 bg-red-500/15 text-red-400 rounded-2xl font-black text-sm border border-red-500/30 hover:bg-red-500/25 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} {isEdit ? 'Guardar cambios' : 'Bloquear'}
-                    </button>
-                    <button onClick={onClose} className="px-5 py-3.5 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors rounded-2xl font-bold text-sm">Cancelar</button>
-                </div>
-            </div>
-        </div>
+                <BtnVolver onClick={onClose} />
+            </Card>
+        </Overlay>
     )
 }
 
 // ─── MODAL CANCELAR CONFIRMACIÓN ─────────────────────────────────────────────
-export const ModalCancelConfirm = ({ sesion, onConfirm, onCancel }) => {
-    return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
-            <div className="bg-[#111318] border border-white/10 w-full max-w-xs rounded-3xl p-8 text-center" style={{ boxShadow: '0 0 60px rgba(0,0,0,0.9)' }}>
-                <Ban className="w-10 h-10 text-red-400 mx-auto mb-3" />
-                <h3 className="text-lg font-black text-white mb-2">¿Cancelar sesión?</h3>
-                <p className="text-white/40 text-sm mb-6">La sesión quedará marcada como cancelada.</p>
-                <div className="flex gap-3">
-                    <button onClick={() => onConfirm(sesion)} className="flex-1 py-3 bg-red-500/20 text-red-400 rounded-2xl font-bold text-sm border border-red-500/30 hover:bg-red-500/30 transition-colors">Confirmar</button>
-                    <button onClick={onCancel} className="flex-1 py-3 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors rounded-2xl font-bold text-sm">Volver</button>
+export const ModalCancelConfirm = ({ sesion, onConfirm, onCancel }) => (
+    <Overlay onClick={onCancel}>
+        <Card>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{
+                    width: 64, height: 64,
+                    background: F.redSoft, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 12px',
+                }}>
+                    <Ban style={{ width: 28, height: 28, color: F.red }} />
                 </div>
+                <h3 style={{ fontSize: 20, fontWeight: 900, color: F.blue, marginBottom: 6 }}>¿Cancelar sesión?</h3>
+                <p style={{ fontSize: 13, color: F.gray, fontWeight: 600 }}>
+                    La sesión quedará marcada como cancelada.
+                </p>
             </div>
-        </div>
-    )
-}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+                <Btn3D
+                    onClick={() => onConfirm(sesion)}
+                    color={F.red}
+                    shadowColor="rgba(239,68,68,0.35)"
+                    icon={<Ban style={{ width: 20, height: 20 }} />}
+                    label="Cancelar sesión"
+                />
+                <Btn3D
+                    onClick={onCancel}
+                    color={F.grayBg}
+                    shadowColor="rgba(100,116,139,0.25)"
+                    textColor={F.gray}
+                    label="No"
+                />
+            </div>
+            <BtnVolver onClick={onCancel} />
+        </Card>
+    </Overlay>
+)
 
 // ─── MODAL ELIMINAR CONFIRMACIÓN ─────────────────────────────────────────────
-export const ModalDeleteConfirm = ({ sesion, onConfirm, onCancel }) => {
-    return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
-            <div className="bg-[#111318] border border-white/10 w-full max-w-xs rounded-3xl p-8 text-center" style={{ boxShadow: '0 0 60px rgba(0,0,0,0.9)' }}>
-                <X className="w-10 h-10 text-red-400 mx-auto mb-3" />
-                <h3 className="text-lg font-black text-white mb-2">¿Eliminar {sesion.isBlock ? 'bloqueo' : 'sesión'}?</h3>
-                <p className="text-white/40 text-sm mb-6">Esta acción no puede deshacerse.</p>
-                <div className="flex gap-3">
-                    <button onClick={() => onConfirm(sesion)} className="flex-1 py-3 bg-red-500/20 text-red-400 rounded-2xl font-bold text-sm border border-red-500/30 hover:bg-red-500/30 transition-colors">Eliminar</button>
-                    <button onClick={onCancel} className="flex-1 py-3 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors rounded-2xl font-bold text-sm">Cancelar</button>
+export const ModalDeleteConfirm = ({ sesion, onConfirm, onCancel }) => (
+    <Overlay onClick={onCancel}>
+        <Card>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{
+                    width: 64, height: 64,
+                    background: F.redSoft, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 12px',
+                }}>
+                    <Trash2 style={{ width: 28, height: 28, color: F.red }} />
                 </div>
+                <h3 style={{ fontSize: 20, fontWeight: 900, color: F.blue, marginBottom: 6 }}>
+                    ¿Eliminar {sesion?.isBlock ? 'bloqueo' : 'sesión'}?
+                </h3>
+                <p style={{ fontSize: 13, color: F.gray, fontWeight: 600 }}>
+                    Esta acción no puede deshacerse.
+                </p>
             </div>
-        </div>
-    )
-}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+                <Btn3D
+                    onClick={() => onConfirm(sesion)}
+                    color={F.red}
+                    shadowColor="rgba(239,68,68,0.35)"
+                    icon={<Trash2 style={{ width: 20, height: 20 }} />}
+                    label="Eliminar"
+                />
+                <Btn3D
+                    onClick={onCancel}
+                    color={F.grayBg}
+                    shadowColor="rgba(100,116,139,0.25)"
+                    textColor={F.gray}
+                    label="No"
+                />
+            </div>
+            <BtnVolver onClick={onCancel} />
+        </Card>
+    </Overlay>
+)

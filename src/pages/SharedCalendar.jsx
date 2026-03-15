@@ -19,6 +19,71 @@ import { ModalSesion, ModalMoverSesion, ModalBloqueo, ModalCancelConfirm, ModalD
 
 function cn(...inputs) { return twMerge(clsx(inputs)) }
 
+// ─── Botón cuadrado 3D (inline, para modales de SharedCalendar) ───────────────
+const Btn3DInline = ({
+    onClick, disabled = false, loading = false,
+    color = '#2b47c9', shadow = 'rgba(43,71,201,0.35)',
+    textColor = '#ffffff',
+    icon, label,
+}) => {
+    const [pressed, setPressed] = React.useState(false)
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled || loading}
+            onMouseDown={() => setPressed(true)}
+            onMouseUp={() => setPressed(false)}
+            onMouseLeave={() => setPressed(false)}
+            style={{
+                flex: 1,
+                aspectRatio: '1 / 1',
+                minHeight: 80,
+                minWidth: 74,
+                background: disabled ? '#d1d5db' : color,
+                color: disabled ? '#9ca3af' : textColor,
+                border: 'none',
+                borderRadius: 18,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                fontWeight: 900,
+                fontSize: 11,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 6,
+                boxShadow: pressed || disabled ? 'none' : `0 6px 0 ${shadow}, 0 10px 20px ${shadow}`,
+                transform: pressed ? 'translateY(4px)' : 'translateY(0)',
+                transition: 'transform 0.08s, box-shadow 0.08s',
+            }}
+        >
+            {loading
+                ? <Loader2 style={{ width: 22, height: 22 }} className="animate-spin" />
+                : <>
+                    {icon && <span style={{ display: 'flex' }}>{icon}</span>}
+                    <span>{label}</span>
+                </>
+            }
+        </button>
+    )
+}
+
+// ─── Botón Volver (fila completa, siempre al fondo) ───────────────────────────
+const BtnVolverInline = ({ onClick, label = 'Volver' }) => (
+    <button
+        onClick={onClick}
+        style={{
+            width: '100%', padding: '13px 0', marginTop: 12,
+            background: '#f2f4f8', color: '#6b7a99',
+            border: '1.5px solid #e2e6f0', borderRadius: 16,
+            fontWeight: 800, fontSize: 13, cursor: 'pointer',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = '#e2e6f0'}
+        onMouseLeave={e => e.currentTarget.style.background = '#f2f4f8'}
+    >
+        {label}
+    </button>
+)
+
+
 // Horas de 9:00 a 20:00 en intervalos de 30 minutos
 const HORAS = []
 for (let h = 9; h <= 20; h++) {
@@ -1388,46 +1453,52 @@ const SharedCalendar = ({ onNavigate }) => {
 
             {/* ── MODAL: CONFIRMAR RESERVA (FORÇA) ──────────────────────────────── */}
             {showConfirmModal && selectedSlot && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70] flex items-center justify-center p-6">
-                    <div className="bg-white border border-[#e2e6f0] w-full max-w-xs rounded-3xl p-7 text-center transition-all shadow-[0_10px_40px_rgba(43,71,201,0.15)] animate-in zoom-in-95 duration-200">
-                        <div className="w-14 h-14 bg-[#f2f4f8] rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm">
-                            <CheckCircle2 className="w-7 h-7 text-[#2b47c9]" />
+                <div style={{ position:'fixed', inset:0, background:'rgba(30,40,90,0.45)', backdropFilter:'blur(6px)', zIndex:70, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
+                    onClick={() => { setShowConfirmModal(false); setSelectedSlot(null) }}>
+                    <div style={{ background:'#fff', border:'1.5px solid #e2e6f0', borderRadius:28, padding:'32px 28px 28px', width:'100%', maxWidth:360, boxShadow:'0 16px 60px rgba(43,71,201,0.18)' }}
+                        onClick={e => e.stopPropagation()}>
+                        <div style={{ textAlign:'center', marginBottom:20 }}>
+                            <div style={{ width:64, height:64, background:'#f0f3ff', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }}>
+                                <CheckCircle2 style={{ width:28, height:28, color:'#2b47c9' }} />
+                            </div>
+                            <h3 style={{ fontSize:20, fontWeight:900, color:'#2b47c9', marginBottom:4 }}>Confirmar reserva</h3>
+                            <p style={{ fontSize:13, color:'#6b7a99', fontWeight:700, textTransform:'capitalize', marginBottom:2 }}>
+                                {format(selectedSlot.day, 'EEEE d MMM', { locale: es })}
+                            </p>
+                            <p style={{ fontSize:26, fontWeight:900, color:'#2b47c9', margin:0 }}>{selectedSlot.hora}</p>
                         </div>
-                        <h3 className="text-xl font-black text-[#2b47c9] mb-1">Confirmar reserva</h3>
-                        <p className="text-[#6b7a99] font-bold text-sm mb-1 capitalize">
-                            {format(selectedSlot.day, 'EEEE d MMM', { locale: es })}
-                        </p>
-                        <p className="text-[#2b47c9] font-black text-2xl mb-6">{selectedSlot.hora}</p>
 
                         {isAdmin && (
-                            <div className="mb-6 text-left w-full mx-auto">
-                                <label className="block text-[10px] font-black text-[#6b7a99] uppercase tracking-widest mb-1.5 ml-1">Para el cliente:</label>
+                            <div style={{ marginBottom:20 }}>
+                                <p style={{ fontSize:10, fontWeight:800, color:'#6b7a99', textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:6 }}>Para el cliente</p>
                                 <select
-                                    className="w-full bg-[#f8f9fc] border border-[#e2e6f0] rounded-2xl px-4 py-3 text-sm text-[#2b47c9] font-bold focus:border-[#2b47c9] focus:ring-2 focus:ring-[#2b47c9]/20 outline-none transition-all appearance-none cursor-pointer"
                                     value={selectedClientId}
                                     onChange={(e) => setSelectedClientId(e.target.value)}
-                                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7a99'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.2em 1.2em' }}
+                                    style={{ width:'100%', boxSizing:'border-box', background:'#f8f9fc', border:'1.5px solid #e2e6f0', borderRadius:14, padding:'10px 14px', color:'#2b47c9', fontWeight:700, fontSize:13, outline:'none', appearance:'none' }}
                                 >
                                     <option value="" disabled>Seleccionar...</option>
                                     {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre || c.email}</option>)}
                                 </select>
                             </div>
                         )}
-                        <div className="flex gap-3">
-                            <button
+
+                        {/* Botones cuadrados 3D */}
+                        <div style={{ display:'flex', gap:10 }}>
+                            <Btn3DInline
                                 onClick={handleReservar}
                                 disabled={bookingLoading}
-                                className="flex-1 py-3.5 bg-[#2b47c9] text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-[#1e34a6] transition-colors shadow-md disabled:opacity-60"
-                            >
-                                {bookingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Reservar'}
-                            </button>
-                            <button
+                                loading={bookingLoading}
+                                color="#2b47c9" shadow="rgba(43,71,201,0.35)"
+                                icon={<CheckCircle2 style={{ width:22, height:22 }} />}
+                                label="Reservar"
+                            />
+                            <Btn3DInline
                                 onClick={() => { setShowConfirmModal(false); setSelectedSlot(null) }}
-                                className="flex-1 py-3.5 bg-[#f2f4f8] text-[#6b7a99] rounded-2xl font-black text-sm hover:bg-[#e2e6f0] transition-colors"
-                            >
-                                Cancelar
-                            </button>
+                                color="#f2f4f8" shadow="rgba(100,116,139,0.2)" textColor="#6b7a99"
+                                label="Cancelar"
+                            />
                         </div>
+                        <BtnVolverInline onClick={() => { setShowConfirmModal(false); setSelectedSlot(null) }} />
                     </div>
                 </div>
             )}
@@ -1435,125 +1506,137 @@ const SharedCalendar = ({ onNavigate }) => {
 
             {/* ── MODAL: DETALLE CITA (FORÇA) ────────────────────────────────────── */}
             {showDetailModal && selectedEvent && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70] flex items-center justify-center p-6">
-                    <div className="bg-white border border-[#e2e6f0] w-full max-w-xs rounded-3xl p-7 text-center transition-all shadow-[0_10px_40px_rgba(43,71,201,0.15)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <div className="w-14 h-14 bg-[#f2f4f8] rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm">
-                            <Clock className="w-7 h-7 text-[#2b47c9]" />
+                <div style={{ position:'fixed', inset:0, background:'rgba(30,40,90,0.45)', backdropFilter:'blur(6px)', zIndex:70, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
+                    onClick={() => setShowDetailModal(false)}>
+                    <div style={{ background:'#fff', border:'1.5px solid #e2e6f0', borderRadius:28, padding:'32px 28px 28px', width:'100%', maxWidth:380, boxShadow:'0 16px 60px rgba(43,71,201,0.18)' }}
+                        onClick={e => e.stopPropagation()}>
+
+                        {/* Cabecera */}
+                        <div style={{ textAlign:'center', marginBottom:20 }}>
+                            <div style={{ width:64, height:64, background:'#f0f3ff', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }}>
+                                <Clock style={{ width:28, height:28, color:'#2b47c9' }} />
+                            </div>
+                            <h3 style={{ fontSize:20, fontWeight:900, color:'#2b47c9', marginBottom:4 }}>
+                                {selectedEvent.isBlock ? 'Bloqueo' : 'Reserva'}
+                            </h3>
+                            <p style={{ fontSize:13, color:'#6b7a99', fontWeight:700, textTransform:'capitalize', marginBottom:2 }}>
+                                {format(selectedEvent.fecha, 'EEEE d MMMM', { locale: es })}
+                            </p>
+                            <p style={{ fontSize:24, fontWeight:900, color:'#2b47c9', margin:0 }}>
+                                {selectedEvent.hora_inicio} – {selectedEvent.hora_fin}
+                            </p>
                         </div>
 
-                        <h3 className="text-xl font-black text-[#2b47c9] mb-1">
-                            {selectedEvent.isBlock ? 'Detalle de Bloqueo' : 'Detalle de reserva'}
-                        </h3>
-                        <p className="text-[#6b7a99] text-sm mb-1 font-bold capitalize">
-                            {format(selectedEvent.fecha, 'EEEE d MMMM', { locale: es })}
-                        </p>
-                        <p className="text-[#2b47c9] font-black text-2xl mb-6">
-                            {selectedEvent.hora_inicio} - {selectedEvent.hora_fin}
-                        </p>
-
                         {!selectedEvent.isBlock && isAdmin && (
-                            <div className="mb-6 bg-[#f8f9fc] rounded-xl p-3 border border-[#e2e6f0]">
-                                <p className="text-[#6b7a99] text-[10px] font-black uppercase tracking-widest mb-1">Cliente</p>
-                                <p className="text-[#2b47c9] font-bold text-sm truncate">
+                            <div style={{ background:'#f8f9fc', borderRadius:14, padding:'10px 14px', border:'1.5px solid #e2e6f0', marginBottom:16 }}>
+                                <p style={{ fontSize:10, fontWeight:800, color:'#6b7a99', textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:2 }}>Cliente</p>
+                                <p style={{ fontSize:14, fontWeight:700, color:'#2b47c9', margin:0 }}>
                                     {selectedEvent.usuarios?.nombre || selectedEvent.usuarios?.email || 'Desconocido'}
                                 </p>
                             </div>
                         )}
 
                         {isAdmin ? (
-                            <div className="flex flex-col gap-2 mb-4">
+                            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                                 {!selectedEvent.isBlock && (
                                     <>
-                                        <button
-                                            onClick={(e) => toggleEstadoSesion(e, selectedEvent)}
-                                            className={cn("w-full py-3 rounded-2xl font-black text-xs transition-colors flex items-center justify-center gap-2",
-                                                selectedEvent.estado === 'realizada'
-                                                    ? 'bg-[#22c55e]/10 text-[#22c55e] hover:bg-[#22c55e]/20'
-                                                    : selectedEvent.estado === 'cancelada'
-                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                        : 'bg-white border-[1.5px] border-[#e2e6f0] text-[#6b7a99] hover:bg-[#f8f9fc]'
+                                        {/* Fila cuadrados: Realizada + Pago */}
+                                        <div style={{ display:'flex', gap:10, marginBottom:4 }}>
+                                            <Btn3DInline
+                                                onClick={(e) => toggleEstadoSesion(e, selectedEvent)}
+                                                disabled={selectedEvent.estado === 'cancelada'}
+                                                color={selectedEvent.estado === 'realizada' ? '#f0fdf4' : '#f8f9fc'}
+                                                shadow="rgba(34,197,94,0.2)"
+                                                textColor={selectedEvent.estado === 'realizada' ? '#22c55e' : selectedEvent.estado === 'cancelada' ? '#9ca3af' : '#6b7a99'}
+                                                icon={<Check style={{ width:20, height:20 }} />}
+                                                label={selectedEvent.estado === 'realizada' ? 'Realizada' : selectedEvent.estado === 'cancelada' ? 'Cancelada' : 'Realizada?'}
+                                            />
+                                            <Btn3DInline
+                                                onClick={(e) => togglePagoEstado(e, selectedEvent)}
+                                                disabled={selectedEvent.estado === 'cancelada'}
+                                                color={selectedEvent.pago_estado === 'pagada' ? '#fffbeb' : '#f8f9fc'}
+                                                shadow="rgba(245,158,11,0.2)"
+                                                textColor={selectedEvent.pago_estado === 'pagada' ? '#b45309' : '#6b7a99'}
+                                                icon={<span style={{ fontSize:18 }}>{selectedEvent.pago_estado === 'pagada' ? '€' : '€?'}</span>}
+                                                label={selectedEvent.pago_estado === 'pagada' ? 'Pagada' : 'Pendiente'}
+                                            />
+                                            <Btn3DInline
+                                                onClick={() => {
+                                                    setAdminModal({ type: 'mover', payload: selectedEvent });
+                                                    setShowDetailModal(false);
+                                                }}
+                                                color="#f0f3ff" shadow="rgba(43,71,201,0.2)" textColor="#2b47c9"
+                                                icon={<Move style={{ width:20, height:20 }} />}
+                                                label="Mover"
+                                            />
+                                        </div>
+
+                                        {/* Fila cuadrados: Anular + Eliminar + Ficha */}
+                                        <div style={{ display:'flex', gap:10 }}>
+                                            {selectedEvent.estado !== 'cancelada' && (
+                                                <Btn3DInline
+                                                    onClick={openCancelFromAdmin}
+                                                    color="#fef2f2" shadow="rgba(239,68,68,0.2)" textColor="#ef4444"
+                                                    icon={<Ban style={{ width:20, height:20 }} />}
+                                                    label="Anular"
+                                                />
                                             )}
-                                            disabled={selectedEvent.estado === 'cancelada'}
-                                        >
-                                            <Check className="w-4 h-4" />
-                                            {selectedEvent.estado === 'realizada' ? 'MARCADA COMO REALIZADA' : selectedEvent.estado === 'cancelada' ? 'SESIÓN CANCELADA' : 'MARCAR COMO REALIZADA'}
-                                        </button>
-                                        <button
-                                            onClick={(e) => togglePagoEstado(e, selectedEvent)}
-                                            className={cn("w-full py-3 rounded-2xl font-black text-xs transition-colors flex items-center justify-center gap-2",
-                                                selectedEvent.pago_estado === 'pagada'
-                                                    ? 'bg-amber-500/10 text-amber-500 border-[1.5px] border-amber-500/30 hover:bg-amber-500/20'
-                                                    : 'bg-white border-[1.5px] border-[#e2e6f0] text-[#6b7a99] hover:bg-[#f8f9fc]'
-                                            )}
-                                            disabled={selectedEvent.estado === 'cancelada'}
-                                        >
-                                            {selectedEvent.pago_estado === 'pagada' ? '✓ PAGADA' : 'PENDIENTE DE PAGO'}
-                                        </button>
-                                        <div className="h-px bg-[#e2e6f0] my-2" />
+                                            <Btn3DInline
+                                                onClick={openDeleteFromAdmin}
+                                                color="#f8f9fc" shadow="rgba(100,116,139,0.15)" textColor="#9ca3af"
+                                                icon={<Trash2 style={{ width:20, height:20 }} />}
+                                                label="Eliminar"
+                                            />
+                                            <Btn3DInline
+                                                onClick={() => {
+                                                    setShowDetailModal(false);
+                                                    if (onNavigate) onNavigate('clientes', { clienteId: selectedEvent.cliente_id });
+                                                }}
+                                                color="#f0f3ff" shadow="rgba(43,71,201,0.2)" textColor="#2b47c9"
+                                                icon={<User2 style={{ width:20, height:20 }} />}
+                                                label="Ficha"
+                                            />
+                                        </div>
                                     </>
                                 )}
-                                <button
-                                    onClick={() => {
-                                        if (selectedEvent.isBlock) {
-                                            setAdminModal({ type: 'editar_bloqueo', payload: selectedEvent });
-                                        } else {
-                                            setAdminModal({ type: 'mover', payload: selectedEvent });
-                                        }
-                                        setShowDetailModal(false);
-                                    }}
-                                    className="w-full py-3 bg-white border-[1.5px] border-[#2b47c9] text-[#2b47c9] rounded-2xl font-black text-xs hover:bg-[#f2f4f8] transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Move className="w-4 h-4" /> {selectedEvent.isBlock ? 'Editar bloqueo' : 'Mover Reserva'}
-                                </button>
-                                {!selectedEvent.isBlock && selectedEvent.estado !== 'cancelada' && (
-                                    <button
-                                        onClick={openCancelFromAdmin}
-                                        className="w-full py-3 bg-white border-[1.5px] border-[#ef4444] text-[#ef4444] rounded-2xl font-black text-xs hover:bg-[#fef2f2] transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Ban className="w-4 h-4" /> Anular sesión
-                                    </button>
-                                )}
-                                <button
-                                    onClick={openDeleteFromAdmin}
-                                    className="w-full py-3 bg-white border-[1.5px] border-[#6b7a99] text-[#6b7a99] rounded-2xl font-black text-xs hover:bg-[#f8f9fc] transition-colors flex items-center justify-center gap-2 opacity-60 hover:opacity-100"
-                                >
-                                    <Trash2 className="w-4 h-4" /> Eliminar permanentemente
-                                </button>
-                                {!selectedEvent.isBlock && (
-                                    <button
-                                        onClick={() => {
-                                            setShowDetailModal(false);
-                                            if (onNavigate) onNavigate('clientes', { clienteId: selectedEvent.cliente_id });
-                                        }}
-                                        className="w-full py-3 bg-[#f2f4f8] text-[#2b47c9] rounded-2xl font-black text-xs hover:bg-[#e2e6f0] transition-colors flex items-center justify-center gap-2 mt-2"
-                                    >
-                                        <User2 className="w-4 h-4" /> Ver ficha del cliente
-                                    </button>
+                                {selectedEvent.isBlock && (
+                                    <div style={{ display:'flex', gap:10 }}>
+                                        <Btn3DInline
+                                            onClick={() => {
+                                                setAdminModal({ type: 'editar_bloqueo', payload: selectedEvent });
+                                                setShowDetailModal(false);
+                                            }}
+                                            color="#f0f3ff" shadow="rgba(43,71,201,0.2)" textColor="#2b47c9"
+                                            icon={<Move style={{ width:20, height:20 }} />}
+                                            label="Editar"
+                                        />
+                                        <Btn3DInline
+                                            onClick={openDeleteFromAdmin}
+                                            color="#fef2f2" shadow="rgba(239,68,68,0.2)" textColor="#ef4444"
+                                            icon={<Trash2 style={{ width:20, height:20 }} />}
+                                            label="Eliminar"
+                                        />
+                                    </div>
                                 )}
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-3 mb-4">
-                                <button
+                            <div style={{ display:'flex', gap:10 }}>
+                                <Btn3DInline
                                     onClick={() => openModify(selectedEvent)}
-                                    className="w-full py-3.5 bg-white text-[#f97316] border-[1.5px] border-[#f97316] rounded-2xl font-black text-sm hover:bg-[#fff7ed] transition-colors shadow-sm"
-                                >
-                                    Modificar reserva
-                                </button>
-                                <button
+                                    color="#fff7ed" shadow="rgba(249,115,22,0.25)" textColor="#f97316"
+                                    icon={<Edit2 style={{ width:20, height:20 }} />}
+                                    label="Modificar"
+                                />
+                                <Btn3DInline
                                     onClick={() => openCancel()}
-                                    className="w-full py-3.5 bg-white text-[#ef4444] border-[1.5px] border-[#ef4444] rounded-2xl font-black text-sm hover:bg-[#fef2f2] transition-colors shadow-sm"
-                                >
-                                    Anular reserva
-                                </button>
+                                    color="#fef2f2" shadow="rgba(239,68,68,0.25)" textColor="#ef4444"
+                                    icon={<Ban style={{ width:20, height:20 }} />}
+                                    label="Anular"
+                                />
                             </div>
                         )}
-                        
-                        <button
-                            onClick={() => setShowDetailModal(false)}
-                            className="w-full py-3.5 bg-[#f2f4f8] text-[#6b7a99] rounded-2xl font-black text-sm hover:bg-[#e2e6f0] transition-colors mt-2"
-                        >
-                            Volver
-                        </button>
+
+                        <BtnVolverInline onClick={() => setShowDetailModal(false)} />
                     </div>
                 </div>
             )}
@@ -1622,31 +1705,36 @@ const SharedCalendar = ({ onNavigate }) => {
 
             {/* ── MODAL: ANULAR (FORÇA) ─────────────────────────────────────────── */}
             {showCancelModal && selectedEvent && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80] flex items-center justify-center p-6">
-                    <div className="bg-white border border-[#e2e6f0] w-full max-w-xs rounded-3xl p-8 shadow-[0_10px_40px_rgba(43,71,201,0.15)] text-center animate-in zoom-in-95 duration-200">
-                        <div className="w-16 h-16 bg-[#fef2f2] text-[#ef4444] rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm">
-                            <AlertCircle className="w-8 h-8" />
+                <div style={{ position:'fixed', inset:0, background:'rgba(30,40,90,0.45)', backdropFilter:'blur(6px)', zIndex:80, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
+                    onClick={() => setShowCancelModal(false)}>
+                    <div style={{ background:'#fff', border:'1.5px solid #e2e6f0', borderRadius:28, padding:'32px 28px 28px', width:'100%', maxWidth:340, boxShadow:'0 16px 60px rgba(43,71,201,0.18)' }}
+                        onClick={e => e.stopPropagation()}>
+                        <div style={{ textAlign:'center', marginBottom:20 }}>
+                            <div style={{ width:64, height:64, background:'#fef2f2', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }}>
+                                <AlertCircle style={{ width:28, height:28, color:'#ef4444' }} />
+                            </div>
+                            <h3 style={{ fontSize:20, fontWeight:900, color:'#2b47c9', marginBottom:6 }}>¿Anular reserva?</h3>
+                            <p style={{ fontSize:13, color:'#6b7a99', fontWeight:700, marginBottom:2 }}>
+                                {format(selectedEvent.fecha, 'd MMMM', { locale: es })} · {selectedEvent.hora_inicio}
+                            </p>
+                            <p style={{ fontSize:11, color:'#a0abbf' }}>Esta acción no se puede deshacer.</p>
                         </div>
-                        <h3 className="text-xl font-black text-[#2b47c9] mb-2">¿Anular reserva?</h3>
-                        <p className="text-[#6b7a99] font-bold text-sm mb-2 leading-relaxed">
-                            {format(selectedEvent.fecha, 'd MMMM', { locale: es })} a las {selectedEvent.hora_inicio}
-                        </p>
-                        <p className="text-[#a0abbf] text-xs mb-8">Esta acción no se puede deshacer.</p>
-                        <div className="flex gap-3">
-                            <button
+                        <div style={{ display:'flex', gap:10 }}>
+                            <Btn3DInline
                                 onClick={handleCancelar}
                                 disabled={cancelLoading}
-                                className="flex-1 py-4 bg-[#ef4444] text-white rounded-2xl font-black text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-[#dc2626] transition-colors"
-                            >
-                                {cancelLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sí, anular'}
-                            </button>
-                            <button
+                                loading={cancelLoading}
+                                color="#ef4444" shadow="rgba(239,68,68,0.35)"
+                                icon={<AlertCircle style={{ width:22, height:22 }} />}
+                                label="Sí, anular"
+                            />
+                            <Btn3DInline
                                 onClick={() => setShowCancelModal(false)}
-                                className="flex-1 py-4 bg-[#f2f4f8] text-[#6b7a99] rounded-2xl font-black text-sm hover:bg-[#e2e6f0] transition-colors"
-                            >
-                                Volver
-                            </button>
+                                color="#f2f4f8" shadow="rgba(100,116,139,0.2)" textColor="#6b7a99"
+                                label="No"
+                            />
                         </div>
+                        <BtnVolverInline onClick={() => setShowCancelModal(false)} />
                     </div>
                 </div>
             )}
@@ -1744,6 +1832,74 @@ const SharedCalendar = ({ onNavigate }) => {
                                 </div>
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MENÚ HUECO ACTIVO (ADMIN) ────────────────────────────────────── */}
+            {menuHuecoActivo && isAdmin && (
+                <div
+                    style={{ position:'fixed', inset:0, background:'rgba(30,40,90,0.45)', backdropFilter:'blur(6px)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
+                    onClick={() => setMenuHuecoActivo(null)}
+                >
+                    <div
+                        style={{ background:'#fff', border:'1.5px solid #e2e6f0', borderRadius:28, padding:'32px 28px 28px', width:'100%', maxWidth:340, boxShadow:'0 16px 60px rgba(43,71,201,0.18)' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div style={{ textAlign:'center', marginBottom:20 }}>
+                            <h3 style={{ fontSize:20, fontWeight:900, color:'#2b47c9', marginBottom:4 }}>{menuHuecoActivo.hora}</h3>
+                            <p style={{ fontSize:12, color:'#6b7a99', fontWeight:700 }}>Elige una acción para este hueco</p>
+                        </div>
+
+                        <div style={{ display:'flex', gap:10 }}>
+                            <Btn3DInline
+                                onClick={() => {
+                                    setAdminModal({ type: 'sesion', payload: menuHuecoActivo });
+                                    setMenuHuecoActivo(null);
+                                }}
+                                color="#f0fdf4" shadow="rgba(34,197,94,0.25)" textColor="#22c55e"
+                                icon={<Edit2 style={{ width:22, height:22 }} />}
+                                label="Sesión"
+                            />
+                            <Btn3DInline
+                                onClick={async () => {
+                                    const saved = menuHuecoActivo;
+                                    setMenuHuecoActivo(null);
+                                    setBlockLoading(true);
+                                    try {
+                                        const getHoraFin30Mins = (hStr) => {
+                                            const [h, m] = hStr.split(':').map(Number)
+                                            let nextM = m + 30; let nextH = h;
+                                            if (nextM >= 60) { nextM = 0; nextH++; }
+                                            return `${String(nextH).padStart(2, '0')}:${String(nextM).padStart(2, '0')}`
+                                        }
+                                        const horaFin = getHoraFin30Mins(saved.hora)
+                                        await runSupabaseQuery(async () => {
+                                            const { error } = await supabase.from('bloqueos').insert([{
+                                                fecha: saved.fecha, hora_inicio: saved.hora, hora_fin: horaFin,
+                                                tipo: 'franja', owner_id: user.id
+                                            }])
+                                            if (error) throw error
+                                        })
+                                        await fetchData()
+                                    } catch (err) { alert('Error al bloquear: ' + err.message); }
+                                    finally { setBlockLoading(false); }
+                                }}
+                                color="#fef2f2" shadow="rgba(239,68,68,0.25)" textColor="#ef4444"
+                                icon={<Lock style={{ width:22, height:22 }} />}
+                                label="Bloquear"
+                            />
+                            <Btn3DInline
+                                onClick={() => {
+                                    setAdminModal({ type: 'bloqueo', payload: menuHuecoActivo });
+                                    setMenuHuecoActivo(null);
+                                }}
+                                color="#f8f9fc" shadow="rgba(100,116,139,0.2)" textColor="#6b7a99"
+                                icon={<Lock style={{ width:22, height:22 }} />}
+                                label="Avanzado"
+                            />
+                        </div>
+                        <BtnVolverInline onClick={() => setMenuHuecoActivo(null)} />
                     </div>
                 </div>
             )}
