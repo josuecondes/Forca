@@ -170,8 +170,14 @@ const SharedCalendar = ({ onNavigate }) => {
 
     // Modo Mover Cita (Móvil)
     const [movingCita, setMovingCita] = useState(null)
+    const movingCitaRef = useRef(null) // ref para acceso sin-closure en handlers de touch de iOS
     const longPressCitaTimer = useRef(null)
     const longPressCitaFired = useRef(false)
+
+    // Mantener ref sincronizado con el estado
+    useEffect(() => {
+        movingCitaRef.current = movingCita
+    }, [movingCita])
 
     const getItemId = (type, day, hora) => {
         if (type === 'slot') return `slot_${format(day, 'yyyy-MM-dd')}_${hora}`
@@ -269,15 +275,64 @@ const SharedCalendar = ({ onNavigate }) => {
         if (cita?.isBlock) return {}
         return {
             onPointerDown: (e) => handleCitaPointerDown(e, cita),
-            onTouchStart: (e) => handleCitaPointerDown(e, cita),
+            onTouchStart: (e) => {
+                // Llamamos al handler habitual
+                handleCitaPointerDown(e, cita)
+                // En iOS, preventDefault aquí evita que el navegador interprete el gesto
+                // como scroll y envíe un touchcancel, que rompería el long-press.
+                // El touchAction:none en el style CSS debería bastar en iOS 13+,
+                // pero llamar e.preventDefault() aquí lo garantiza en versiones antiguas.
+                // NOTA: esto no impide que el touchend burbujee al contenedor padre,
+                // ya que burbujeo y preventDefault son cosas independientes.
+                e.preventDefault()
+            },
             onPointerUp: handleCitaPointerUp,
             onPointerLeave: handleCitaPointerUp,
             onPointerCancel: handleCitaPointerUp,
-            onTouchEnd: handleCitaPointerUp,
+            onTouchEnd: (e) => {
+                handleCitaPointerUp()
+                // No hacemos stopPropagation: dejamos que el touchend burbujee
+                // al contenedor externo donde handleTouchEndForMove lo captura
+                // y usa elementFromPoint para saber el slot destino (fix iOS).
+            },
             onTouchCancel: handleCitaPointerUp,
             onContextMenu: (e) => { e.preventDefault(); },
             style: { WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none', touchAction: 'none' }
         }
+    }
+
+
+    // ── iOS fix: detecta el slot destino por coordenadas en touchend ──────────────
+    const handleTouchEndForMove = (e) => {
+        // Usamos el ref para tener siempre el valor más reciente
+        // (evitar stale closure en handlers de eventos)
+        const currentMovingCita = movingCitaRef.current
+        if (!currentMovingCita) return
+        // Solo actuar si hay un toque
+        const touch = e.changedTouches?.[0]
+        if (!touch) return
+
+        // Obtener el elemento exacto bajo el dedo con elementFromPoint
+        const el = document.elementFromPoint(touch.clientX, touch.clientY)
+        if (!el) return
+
+        // Subir por el DOM para encontrar el slot marcado con data-fecha
+        const slotEl = el.closest('[data-fecha]')
+        if (!slotEl) return
+
+        const fecha = slotEl.getAttribute('data-fecha')
+        const hora = slotEl.getAttribute('data-hora')
+        const bookable = slotEl.getAttribute('data-bookable') === 'true'
+
+        if (!fecha || !hora || !bookable) return
+
+        // Reconstruir el objeto day (Date) desde la cadena de fecha
+        const [y, mo, d] = fecha.split('-').map(Number)
+        const targetDay = new Date(y, mo - 1, d)
+
+        // Prevenir que el click posterior del touchend se registre como un tap normal
+        e.preventDefault()
+        handleRescheduleDirect(currentMovingCita, targetDay, hora)
     }
 
     const handleRescheduleDirect = async (cita, targetDay, targetHora) => {
@@ -1020,6 +1075,9 @@ const SharedCalendar = ({ onNavigate }) => {
 
                                     return (
                                         <div key={i}
+                                            data-fecha={format(day, 'yyyy-MM-dd')}
+                                            data-hora={hora}
+                                            data-bookable={isBookable ? 'true' : 'false'}
                                             style={{
                                                 position: 'relative',
                                                 background: cellBg,
@@ -1171,7 +1229,11 @@ const SharedCalendar = ({ onNavigate }) => {
                                 </div>
 
                                 {/* Celda contenido */}
-                                <div style={{ position: 'relative', background: slotBg, overflow: 'visible' }}>
+                                <div
+                                    data-fecha={format(currentDate, 'yyyy-MM-dd')}
+                                    data-hora={hora}
+                                    data-bookable={isBookable ? 'true' : 'false'}
+                                    style={{ position: 'relative', background: slotBg, overflow: 'visible' }}>
                                     {!overlappingCita || (!isEditable && !isBlockItem) ? (
                                         <div
                                             onClick={(e) => {
@@ -1367,14 +1429,18 @@ const SharedCalendar = ({ onNavigate }) => {
             </div>
 
             {/* ── CUERPO DEL CALENDARIO ── */}
-            <div style={{
-                margin: '0 16px',
-                background: '#ffffff',
-                borderRadius: 16,
-                overflow: 'hidden',
-                boxShadow: '0 2px 16px rgba(30,50,120,0.08)',
-                border: '1px solid #e2e6f0',
-            }}>
+            {/* onTouchEnd a nivel de contenedor: fix para iOS donde el touchend no genera
+                click en el elemento destino si el touchstart ocurrió en otro elemento. */}
+            <div
+                onTouchEnd={handleTouchEndForMove}
+                style={{
+                    margin: '0 16px',
+                    background: '#ffffff',
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 16px rgba(30,50,120,0.08)',
+                    border: '1px solid #e2e6f0',
+                }}>
                 {isLoadingData ? (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
                         <Loader2 size={28} className="animate-spin" style={{ color: '#2b47c9' }} />
